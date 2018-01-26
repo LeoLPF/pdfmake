@@ -68,7 +68,6 @@ var toCharCode = function(char){
 
 FontWrapper.prototype.encode = function(text){
   var self = this;
-
   var charTypesInInline = _.chain(text.split('')).map(toCharCode).uniq().value();
 	if (charTypesInInline.length > self.MAX_CHAR_TYPES) {
 		throw new Error('Inline has more than '+ self.MAX_CHAR_TYPES + ': ' + text + ' different character types and therefore cannot be properly embedded into pdf.');

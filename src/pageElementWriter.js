@@ -58,18 +58,23 @@ PageElementWriter.prototype.addFragment = function(fragment, useBlockXOffset, us
 };
 
 PageElementWriter.prototype.moveToNextPage = function(pageOrientation) {
-	
+
 	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
-	
-  if (nextPage.newPageCreated) {
-		this.repeatables.forEach(function(rep) {
-			this.writer.addFragment(rep, true);
-		}, this);
-	} else {
-		this.repeatables.forEach(function(rep) {
-			this.writer.context.moveDown(rep.height);
-		}, this);
-	}
+
+	//原作者代码
+  //if (nextPage.newPageCreated) {
+	//	this.repeatables.forEach(function(rep) {
+	//		this.writer.addFragment(rep, true);
+	//	}, this);
+	//} else {
+	//	this.repeatables.forEach(function(rep) {
+	//		this.writer.context.moveDown(rep.height);
+	//	}, this);
+	//}
+
+	this.repeatables.forEach(function(rep) {
+		this.writer.addFragment(rep, true);
+	}, this);
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,

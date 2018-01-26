@@ -1,7 +1,11 @@
 /* jslint node: true */
 'use strict';
 
-var WORD_RE = /([^ ,\/!.?:;\-\n]*[ ,\/!.?:;\-]*)|\n/g;
+
+//WORD_RE    reEdit by LPF,增加了中文分词正则，以及对数值及标点符号的处理正则
+var WORD_RE = /([`~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD]*[-|+|]*\d+((\.\d+)|(\.[A-Za-z]+))[ `~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD]*)|([`~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD]*[-|+|]*\d+[ `~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD\n])|([`~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD]*[-|+|]*\d+((\.\d+)+|(\.[A-Za-z]+)+)[ `~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD\n]*)|([-|+|]*\d+)|([\u4E00-\u9FFF][ `~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD\n]*)|([\u4E00-\u9FFF])|([^ `~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD]*[a-zA-Z]+[ `~!@#$%\^&\*()_\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD\n]*)|([\uFB00-\uFFFD]*[ `~!@#$%\^&\*()_　\-\+=\{\}\[\]\|:\";\'<>?,\.\/\\～·！@#￥%……&×（）——=『』【】、：“；”‘’《》〈〉？，。\uFB00-\uFFFD\n]*)|\n/g;
+
+//var WORD_RE = /([^ ,\/!.?:;\-\n]*[ ,\/!.?:;\-]*)|\n/g;    //原作者的分词正则代码
 // /\S*\s*/g to be considered (I'm not sure however - we shouldn't split 'aaa !!!!')
 
 var LEADING = /^(\s)+/g;
@@ -94,13 +98,22 @@ TextTools.prototype.sizeOfString = function(text, styleContextStack) {
 
 function splitWords(text, noWrap) {
 	var results = [];
-	text = text.replace('\t', '    ');
+	text = text.toString().replace('\t', '    ');
 
 	var array;
 	if (noWrap) {
 		array = [ text, "" ];
 	} else {
 		array = text.match(WORD_RE);
+		var array2 = [];
+		for(var i = 0,l=array.length;i<l;i++){
+			while(array[i].length>20){
+				array2[array2.length] = array[i].slice(0,2);
+				array[i] = array[i].slice(2);
+			}
+			array2[array2.length] = array[i];
+		}
+		array = array2;
 	}
 	// i < l - 1, because the last match is always an empty string
 	// other empty strings however are treated as new-lines
@@ -153,7 +166,21 @@ function normalizeTextArray(array) {
 
 		if (typeof item == 'string' || item instanceof String) {
 			words = splitWords(item);
-		} else {
+		} else if(Array.isArray(item.text)){
+			//reEdit by LPF 用于支持行内多层次样式变化   start      原作者代码中没有此判断节点
+			style = copyStyle(item);
+			var subResults = normalizeTextArray(item.text);
+			for(var si= 0, sl = subResults.length;si<sl;si++){
+				var result = subResults[si];
+				var subStyle = copyStyle(result);
+				var style2 = copyStyle(style);
+				subStyle = copyStyle(subStyle,style2);
+				result = copyStyle(subStyle,result);
+				results.push(result);
+			}
+			continue;
+			//reEdit by LPF 用于支持行内多层次样式变化   end
+		}else{
 			words = splitWords(item.text, item.noWrap);
 			style = copyStyle(item);
 		}
@@ -209,6 +236,10 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 
 function measure(fontProvider, textArray, styleContextStack) {
 	var normalized = normalizeTextArray(textArray);
+	//add by LPF text_indent属性，用于首行缩进，原作者的代码中没有这个功能
+	var textIndent = {
+		isFirstLine:true
+	};
 
 	normalized.forEach(function(item) {
 		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
@@ -236,6 +267,26 @@ function measure(fontProvider, textArray, styleContextStack) {
 		else {
 			item.leadingCut = 0;
 		}
+
+		//link added by LPF 完善对文本超链接的支持
+		var link = getStyleProperty(item,styleContextStack,'link',null);
+		item.link = link;
+		//textIndent  added by LPF 具体实现文本首行缩进
+		//item['text-indent']有两种设置方式：1）'**px' 这里的px并非指的是像素（借用的是CSS中的单位），而是pdfmake.js中的单元长度。2）'[number]'首行缩进[number]个英文字符的长度
+		var text_indent = getStyleProperty(item,styleContextStack,'text-indent',0);
+		if(textIndent.isFirstLine){
+			if(text_indent.toString().indexOf('px')>0){
+				item.leadingCut -= parseInt(text_indent);
+			}else{
+				if(typeof text_indent == 'number'){
+					for(var i=0;i<text_indent;i++){
+						item.leadingCut -= font.widthOfString('a',fontSize);
+					}
+				}
+			}
+			textIndent.isFirstLine = false;
+		}
+		//reEdit end
 
 		if (trailingSpaces) {
 			item.trailingCut = font.widthOfString(trailingSpaces[0], fontSize);

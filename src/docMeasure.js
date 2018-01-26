@@ -37,7 +37,7 @@ DocMeasure.prototype.measureNode = function(node) {
 	} else if (typeof node == 'string' || node instanceof String) {
 		node = { text: node };
 	}
-	
+
 	// Deal with empty nodes to prevent crash in getNodeMargin
 	if (Object.keys(node).length === 0) {
 		// A warning could be logged: console.warn('pdfmake: Empty node, ignoring it');
@@ -137,7 +137,7 @@ DocMeasure.prototype.measureNode = function(node) {
 				margin = convertMargin(flattenedStyleArray.margin);
 			}
 		}
-		
+
 		margin = processSingleMargins(node, margin);
 
 		if(node.margin){
@@ -492,6 +492,9 @@ DocMeasure.prototype.measureCanvas = function(node) {
 				h = Math.max(h, vector.points[i2].y);
 			}
 			break;
+		//case 'text':
+		//	this.measureNode(vector.text);
+		//	break;
 		}
 	}
 

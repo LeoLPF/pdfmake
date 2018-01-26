@@ -92,8 +92,10 @@ ElementWriter.prototype.addImage = function(image, index) {
 	if (context.availableHeight < image._height || !page) {
 		return false;
 	}
-
-	image.x = context.x + (image.x || 0);
+	//处理static header 和 static footer 中的图片在非第一页的情况下逐渐右移的BUG
+	//image.x = context.x;
+	//image.x = context.x + (image.x || 0);   //原作者代码
+	image.x = context.x;
 	image.y = context.y;
 
 	this.alignImage(image);
